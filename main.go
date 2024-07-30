@@ -1,7 +1,5 @@
 package main
 
-import "testing"
-
 type Head struct {
 	ContentType     mediaType
 	ContentEncoding contentCoding
@@ -31,6 +29,13 @@ type contentCoding struct {
 	token string // "compress" "x-compress" "deflate" "gzip" "x-gzip"
 }
 
+const (
+  GET = iota
+  POST
+  PUT
+  DELETE
+)
+
 type Server struct {
   port int
 }
@@ -46,54 +51,34 @@ const (
   HTTP_INTERNAL_SERVER_ERROR = 500
 )
 
-func testValidPath(t *testing.T) {
-  server := createServer()
-  server.run()
-  code := server.GET("/")
-  if code != HTTP_OK {
-    t.Fatalf(`Requested GET for '/' failed with %d`, code)
-  }
-}
-
-func testUnauthorized(t *testing.T) {
-  server := createServer()
-  server.addPath("/admin")
-  server.changePermission("/admin", "Role: Admin")
-  server.run()
-  code := server.GET("/admin")
-  if code != HTTP_UNAUTHORIZED {
-    t.Fatalf(`Requested GET for '/admin' without permissions accepted with %d`, code)
-  }
-}
-
-func testPostWithPayload(t *testing.T) {
-  server := createServer()
-  server.addPath("/login", "POST")
-  server.run()
-  code := server.POST("/login", "username: user, password: pass")
-  if code != HTTP_OK {
-    t.Fatalf(`Requested POST for '/login' with payload failed with %d`, code)
-  }
-}
-
-func testPostWithoutPayload(t *testing.T) {
-  server, err := createServer()
-  if err != nil {
-    t.Fatalf(`Failed to create server.`)
-  }
-  server.addPath("/login", "POST")
-  server.run()
-  code := server.POST("/login")
-  if code != HTTP_BAD_REQUEST {
-    t.Fatalf(`Requested POST for '/login' with no data accepted with %d`, code)
-  }
-}
-
-func run() {
+func (server *Server) listen() {
+  panic("Not implemented yet")
 	return
 }
 
-func createServer() (string, error) {
-  server := Server
+func createServer(port int) (Server, error) {
+  var server Server
+  server.port = port
   return server, nil
+}
+
+func (server *Server) addPath(path string, method int) (error) {
+  // server.paths = { path: path, method: method }
+  panic("Not implemented yet")
+  return nil
+}
+
+func (server *Server) GET(path string) (int, error) {
+  panic("Not implemented yet")
+  return HTTP_OK, nil
+}
+
+func (server *Server) POST(path string, payload string) (int, error) {
+  panic("Not implemented yet")
+  return HTTP_OK, nil
+}
+
+func (server *Server) changePermission(path string, rule string) (error){
+  panic("Not implemented yet")
+  return nil
 }
