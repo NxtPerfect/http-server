@@ -49,6 +49,8 @@ type Server struct {
 	port          string
 	templatesPath string
 	paths         map[string][]Path
+	readyChan     chan struct{}
+	// wg            *sync.WaitGroup
 }
 
 type Path struct {
@@ -78,20 +80,62 @@ const (
 )
 
 // Used to connect to port and listen for connections
-func (server *Server) listen() {
-	// panic("Not implemented yet")
-	conn, err := net.Listen("tcp", "127.0.0.1:"+server.port)
+func (server *Server) Listen() {
+	server.host = "127.0.0.1"
+	ln, err := net.Listen("tcp", server.host+":"+server.port)
+	// Causes nil pointer issue, but without that
+	// we never free the ip+port
+	defer ln.Close()
+
 	if err != nil {
 		fmt.Printf("Couldn't listen to port %s %s", server.port, err)
-		conn.Close()
 		panic(err)
 	}
-	conn.Accept()
-	conn.Close()
-	return
+
+	close(server.readyChan)
+
+	for {
+		fmt.Printf("Accepting connections on %s:%s\n", server.host, server.port)
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection:", err)
+			continue
+		}
+		go server.handleConnection(conn)
+	}
 }
 
-func createServer(port string, templatesPath string, paths []Path) (Server, error) {
+func (server *Server) handleConnection(conn net.Conn) {
+	defer conn.Close()
+	fmt.Printf("Got new connection. Closing...\n")
+
+	buff := make([]byte, 32768)
+	_, err := conn.Read(buff)
+	if err != nil {
+		if err.Error() == "EOF" {
+			fmt.Println("Closing connection, got no response to read.")
+			return
+		}
+		panic("Couldn't read response")
+		fmt.Println("Got an error reading response:", err)
+		return
+	}
+
+	hostString := fmt.Sprintf("Host: %s:%s", server.host, server.port)
+	getString := fmt.Sprintf("GET / HTTP/1.1")
+	postString := fmt.Sprintf("POST / HTTP/1.1")
+	reqString := string(buff[:])
+
+	if (!strings.Contains(reqString, getString) && !strings.Contains(reqString, postString)) ||
+		!strings.Contains(reqString, hostString) {
+		fmt.Println("Bad request!")
+		conn.Write([]byte(fmt.Sprintf("%d", HTTP_BAD_REQUEST)))
+		return
+	}
+	conn.Write([]byte(fmt.Sprintf("%d", HTTP_OK)))
+}
+
+func CreateServer(port string, templatesPath string, paths []Path) (Server, error) {
 	var server Server
 	// server.host = host
 	server.port = port
@@ -105,7 +149,7 @@ func createServer(port string, templatesPath string, paths []Path) (Server, erro
 
 // Default server on port 80 with templatse path /templates and get root path /
 // TODO: update to new server architecture (paths having arrays)
-func createDefaultServer() (Server, error) {
+func CreateDefaultServer() (Server, error) {
 	var server Server
 	// server.host = "127.0.0.1"
 	server.port = "1337"
@@ -120,7 +164,7 @@ func createDefaultServer() (Server, error) {
 // Adds new url path to server
 // returns an error
 // TODO: update to new server architecture (paths having arrays)
-func (server *Server) addPath(url string, method string, returnValue string) error {
+func (server *Server) AddPath(url string, method string, returnValue string) error {
 	if strings.HasSuffix(returnValue, ".html") {
 		// return html
 	}
@@ -161,7 +205,7 @@ func (server *Server) POST(url string, payload string) (Payload, error) {
 
 // Set permission for path
 // checks if user sends correct header with role
-func (server *Server) changePermission(path string, rule string) error {
+func (server *Server) ChangePermission(path string, rule string) error {
 	// panic("Changing permissions not implemented yet")
 	return nil
 }
