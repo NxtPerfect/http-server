@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 )
 
 // Http response header
@@ -50,6 +51,7 @@ type Server struct {
 	templatesPath string
 	paths         map[string][]Path
 	readyChan     chan struct{}
+	shutdownChan  chan struct{}
 	// wg            *sync.WaitGroup
 }
 
@@ -79,46 +81,59 @@ const (
 	HTTP_INTERNAL_SERVER_ERROR = 500
 )
 
-// Used to connect to port and listen for connections
-func (server *Server) Listen() {
+func (server *Server) Listen() error {
 	server.host = "127.0.0.1"
 	ln, err := net.Listen("tcp", server.host+":"+server.port)
-	// Causes nil pointer issue, but without that
-	// we never free the ip+port
-	defer ln.Close()
+
+	defer func() {
+		if ln != nil {
+			fmt.Println("Closing down server")
+			ln.Close()
+		}
+	}()
 
 	if err != nil {
 		fmt.Printf("Couldn't listen to port %s %s", server.port, err)
-		panic(err)
+		return err
 	}
 
 	close(server.readyChan)
 
-	for {
-		fmt.Printf("Accepting connections on %s:%s\n", server.host, server.port)
-		conn, err := ln.Accept()
-		if err != nil {
-			fmt.Println("Error accepting connection:", err)
-			continue
+	fmt.Printf("Accepting connections on %s:%s\n", server.host, server.port)
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				fmt.Println("Error accepting connection:", err)
+				break
+			}
+			go server.handleConnection(conn)
 		}
-		go server.handleConnection(conn)
-	}
+	}()
+
+	<-server.shutdownChan
+	return nil
 }
 
 func (server *Server) handleConnection(conn net.Conn) {
-	defer conn.Close()
-	fmt.Printf("Got new connection. Closing...\n")
+	defer func() {
+		fmt.Println("Closing the connection server-side")
+		conn.Close()
+	}()
+	fmt.Println("New connection.")
 
 	buff := make([]byte, 32768)
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	_, err := conn.Read(buff)
+
 	if err != nil {
 		if err.Error() == "EOF" {
-			fmt.Println("Closing connection, got no response to read.")
+			fmt.Println("Closing connection, got no response to read. Error:", err)
 			return
 		}
-		panic("Couldn't read response")
-		fmt.Println("Got an error reading response:", err)
-		return
+		fmt.Println("Error reading response:", err)
+		panic("Couldn't read response.")
 	}
 
 	hostString := fmt.Sprintf("Host: %s:%s", server.host, server.port)
@@ -135,38 +150,46 @@ func (server *Server) handleConnection(conn net.Conn) {
 	conn.Write([]byte(fmt.Sprintf("%d", HTTP_OK)))
 }
 
-func CreateServer(port string, templatesPath string, paths []Path) (Server, error) {
+func CreateServer(host string, port string, templatesPath string, paths []Path) (Server, func()) {
 	var server Server
-	// server.host = host
+	server.host = host
 	server.port = port
 	server.templatesPath = templatesPath
 	server.paths = make(map[string][]Path)
 	for i := range len(paths) {
 		server.paths[paths[i].url] = append(server.paths[paths[i].url], Path{paths[i].url, paths[i].method, paths[i].value})
 	}
-	return server, nil
+	server.readyChan = make(chan struct{})
+	server.shutdownChan = make(chan struct{})
+	return server, func() {
+		server.Shutdown()
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
-// Default server on port 80 with templatse path /templates and get root path /
-// TODO: update to new server architecture (paths having arrays)
-func CreateDefaultServer() (Server, error) {
+func CreateDefaultServer() (Server, func()) {
 	var server Server
-	// server.host = "127.0.0.1"
+	server.host = "127.0.0.1"
 	server.port = "1337"
 	server.templatesPath = "/templates"
 	var path Path = Path{url: "/", method: "GET", value: "Hello, World!"}
-	// server.paths["/"] = append(server.paths["/"], createPath("/", "GET", "Hello, World!"))
 	server.paths = make(map[string][]Path)
 	server.paths["/"] = append(server.paths["/"], path)
-	return server, nil
+	server.readyChan = make(chan struct{})
+	server.shutdownChan = make(chan struct{})
+	return server, func() {
+		server.Shutdown()
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
-// Adds new url path to server
-// returns an error
-// TODO: update to new server architecture (paths having arrays)
+func (server *Server) Shutdown() {
+	close(server.shutdownChan)
+}
+
 func (server *Server) AddPath(url string, method string, returnValue string) error {
 	if strings.HasSuffix(returnValue, ".html") {
-		// return html
+		// TODO: return html
 	}
 	htmlFileContent, err := os.ReadFile(server.templatesPath + "/" + returnValue)
 	if err != nil {
