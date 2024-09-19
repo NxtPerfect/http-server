@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net"
+	"strings"
+	"time"
 
 	"testing"
 )
@@ -67,96 +69,142 @@ func TestConnectToDefaultServer(t *testing.T) {
 	}
 }
 
-// func TestConnectToDefaultServerAndSendValidGetRequest(t *testing.T) {
-// 	cleanup := prepareAndRunDefaultServer(t)
-// 	defer cleanup()
-//
-// 	serverAddressAndPort := "127.0.0.1:1337"
-//
-// 	conn, err := net.Dial("tcp", serverAddressAndPort)
-// 	defer func() {
-// 		if conn != nil {
-// 			fmt.Println("Closing down the connection client-side")
-// 			conn.Close()
-// 		}
-// 	}()
-//
-// 	if err != nil {
-// 		t.Fatalf(`Failed to connect to server %s`, err)
-// 		return
-// 	}
-//
-// 	rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
-// 	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
-// 	rt += fmt.Sprintf("Connection: close\r\n")
-// 	rt += fmt.Sprintf("\r\n")
-//
-// 	conn.SetDeadline(time.Now().Add(5 * time.Second))
-//
-// 	fmt.Println("About to write data...")
-// 	_, err = conn.Write([]byte(rt))
-// 	fmt.Println("Wrote data.")
-//
-// 	if err != nil {
-// 		t.Fatalf(`Failed to write data to server %s`, err)
-// 		return
-// 	}
-//
-// 	buff := make([]byte, 32768)
-// 	_, err = conn.Read(buff)
-// 	fmt.Printf("Response: %s\n", buff)
-//
-// 	resString := string(buff[:])
-//
-// 	if !strings.Contains(resString, "200") {
-// 		t.Fatalf(`Request failed with code %s, expected 200`, resString)
-// 	}
-//
-// }
-//
-// func TestConnectToDefaultServerAndSendBadGetRequest(t *testing.T) {
-// 	cleanup := prepareAndRunDefaultServer(t)
-// 	defer cleanup()
-//
-// 	serverAddressAndPort := "127.0.0.1:1337"
-//
-// 	conn, err := net.Dial("tcp", serverAddressAndPort)
-// 	defer func() {
-// 		if conn != nil {
-// 			fmt.Println("Closing down the connection client-side")
-// 			conn.Close()
-// 		}
-// 	}()
-//
-// 	if err != nil {
-// 		t.Fatalf(`Failed to connect to server %s`, err)
-// 		return
-// 	}
-// 	rt := fmt.Sprintf("DON'T %v HTTP/1.0\r\n", "/")
-// 	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
-// 	rt += fmt.Sprintf("Connection: close\r\n")
-// 	rt += fmt.Sprintf("\r\n")
-//
-// 	conn.SetDeadline(time.Now().Add(5 * time.Second))
-//
-// 	fmt.Println("About to write data...")
-// 	_, err = conn.Write([]byte(rt))
-// 	fmt.Println("Wrote data.")
-//
-// 	if err != nil {
-// 		t.Fatalf(`Failed to write data to server %s`, err)
-// 		return
-// 	}
-//
-// 	// TODO: Read data back
-// 	buff := make([]byte, 32768)
-// 	_, err = conn.Read(buff)
-//
-// 	resString := string(buff[:])
-// 	if !strings.Contains(resString, "400") {
-// 		t.Fatalf(`Request failed with code %s, expected 400`, resString)
-// 	}
-// }
+func TestConnectToDefaultServerAndSendValidGetRequest(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	fmt.Println("About to write data...")
+	_, err = conn.Write([]byte(rt))
+	fmt.Println(" data.")
+
+	if err != nil {
+		t.Fatalf(`Failed to write data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+	fmt.Printf("Response: %s\n", buff)
+
+	resString := string(buff[:])
+
+	if !strings.Contains(resString, "200") {
+		t.Fatalf(`Request failed with code %s, expected 200`, resString)
+	}
+}
+
+func TestReceivingValidHTTPresponse(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	fmt.Println("About to write data...")
+	_, err = conn.Write([]byte(rt))
+	fmt.Println(" data.")
+
+	if err != nil {
+		t.Fatalf(`Failed to write data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+	fmt.Printf("Response: %s\n", buff)
+
+	resString := string(buff[:])
+
+	if !strings.Contains(resString, "200") {
+		t.Fatalf(`Request failed with code %s, expected 200`, resString)
+	}
+
+}
+
+func TestConnectToDefaultServerAndSendBadGetRequest(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("DON'T %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	fmt.Println("About to write data...")
+	_, err = conn.Write([]byte(rt))
+	fmt.Println(" data.")
+
+	if err != nil {
+		t.Fatalf(`Failed to write data to server %s`, err)
+		return
+	}
+
+	// TODO: Read data back
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, "400") {
+		t.Fatalf(`Request failed with code %s, expected 400`, resString)
+	}
+}
 
 func prepareAndRunDefaultServer(t *testing.T) func() {
 	server, cleanup := CreateDefaultServer()
@@ -207,71 +255,600 @@ func isValidDefaultServer(t *testing.T, server Server) bool {
 	return true
 }
 
-// func TestValidPath(t *testing.T) {
-// 	server, err := CreateServer("4043", "/templates", []Path{{"/", "GET", "index.html"}})
-// 	if err != nil {
-// 		t.Fatalf(`Failed to create server.`)
-// 	}
-// 	server.Listen()
-// 	response, err := server.GET("/")
-// 	if response.code != HTTP_OK {
-// 		t.Fatalf(`Requested GET for '/' failed with %d.`, response.code)
-// 	}
-// 	correctContent, err := os.ReadFile("./templates/index.html")
-// 	if err != nil {
-// 		t.Fatalf(`Couldn't find correct file.`)
-// 	}
-// 	correctHtml := string(correctContent)
-// 	if response.content != correctHtml {
-// 		t.Fatalf(`Requested data is empty`)
-// 	}
-// }
-//
-// func TestUnauthorized(t *testing.T) {
-// 	server, err := CreateServer("4043", "/temapltes", []Path{{"/admin", "GET", "You're an admin"}})
-// 	if err != nil {
-// 		t.Fatalf(`Failed to create server.`)
-// 	}
-// 	server.ChangePermission("/admin", "Role: Admin")
-// 	server.listen()
-// 	response, err := server.GET("/admin")
-// 	if err != nil {
-// 		t.Fatalf(`Failed to send get.`)
-// 	}
-// 	if response.code != HTTP_UNAUTHORIZED {
-// 		t.Fatalf(`Requested GET for '/admin' without permissions accepted with %d`, response.code)
-// 	}
-// 	// TODO: check content
-// }
-//
-// func TestPostWithPayload(t *testing.T) {
-// 	server, err := CreateServer("4043", "/templates", []Path{{"/login", "POST", "Post without value"}})
-// 	if err != nil {
-// 		t.Fatalf(`Failed to create server.`)
-// 	}
-// 	server.Listen()
-// 	response, err := server.POST("/login", "username: user, password: pass")
-// 	if err != nil {
-// 		t.Fatalf(`Failed to send post.`)
-// 	}
-// 	if response.code != HTTP_OK {
-// 		t.Fatalf(`Requested POST for '/login' with payload failed with %d`, response.code)
-// 	}
-// 	// TODO: check content
-// }
-//
-// func TestPostWithoutPayload(t *testing.T) {
-// 	server, err := CreateServer("4043", "/template", []Path{{"/login", "POST", "Post with payload"}})
-// 	if err != nil {
-// 		t.Fatalf(`Failed to create server.`)
-// 	}
-// 	server.Listen()
-// 	response, err := server.POST("/login", "")
-// 	if err != nil {
-// 		t.Fatalf(`Failed to send post.`)
-// 	}
-// 	if response.code != HTTP_BAD_REQUEST {
-// 		t.Fatalf(`Requested POST for '/login' with no data accepted with %d`, response.code)
-// 	}
-// 	// TODO: check content
-// }
+func TestTwoValidGetGetRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+
+	// Second Request
+
+	conn, err = net.Dial("tcp", serverAddressAndPort)
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt = fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write second set of data to server %s`, err)
+		return
+	}
+
+	_, err = conn.Read(buff)
+
+	resString = string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+}
+
+func TestTwoValidGetPostRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+
+	// Second Request
+
+	conn, err = net.Dial("tcp", serverAddressAndPort)
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt = fmt.Sprintf("POST %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write second set of data to server %s`, err)
+		return
+	}
+
+	_, err = conn.Read(buff)
+
+	resString = string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+}
+
+func TestTwoValidPostPostRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("POST %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+
+	// Second Request
+
+	conn, err = net.Dial("tcp", serverAddressAndPort)
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt = fmt.Sprintf("POST %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write second set of data to server %s`, err)
+		return
+	}
+
+	_, err = conn.Read(buff)
+
+	resString = string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+}
+
+func TestValidGetInvalidGetRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+
+	// Second Request
+
+	conn, err = net.Dial("tcp", serverAddressAndPort)
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt = fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write second set of data to server %s`, err)
+		return
+	}
+
+	_, err = conn.Read(buff)
+
+	resString = string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
+		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
+	}
+}
+
+func TestInvalidGetGetRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
+		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
+	}
+
+	// Second Request
+
+	conn, err = net.Dial("tcp", serverAddressAndPort)
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt = fmt.Sprintf("GET %v HTTP/9.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write second set of data to server %s`, err)
+		return
+	}
+
+	_, err = conn.Read(buff)
+
+	resString = string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
+		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
+	}
+}
+
+func TestInvalidGetValidGetRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("GET %v HP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
+		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
+	}
+
+	// Second Request
+
+	conn, err = net.Dial("tcp", serverAddressAndPort)
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt = fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write second set of data to server %s`, err)
+		return
+	}
+
+	_, err = conn.Read(buff)
+
+	resString = string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+}
+
+func TestInvalidPostValidGetRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("POST %v HP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
+		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
+	}
+
+	// Second Request
+
+	conn, err = net.Dial("tcp", serverAddressAndPort)
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt = fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write second set of data to server %s`, err)
+		return
+	}
+
+	_, err = conn.Read(buff)
+
+	resString = string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_OK)
+	}
+}
+
+func TestInvalidPostPostRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("POST %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
+		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
+	}
+
+	// Second Request
+
+	conn, err = net.Dial("tcp", serverAddressAndPort)
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+
+	rt = fmt.Sprintf("POST %v HTTP/9.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write second set of data to server %s`, err)
+		return
+	}
+
+	_, err = conn.Read(buff)
+
+	resString = string(buff[:])
+	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
+		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
+	}
+}
+
+func TestThousandValidRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	for range 1000 {
+		conn, err := net.Dial("tcp", serverAddressAndPort)
+		defer func() {
+			if conn != nil {
+				fmt.Println("Closing down the connection client-side")
+				conn.Close()
+			}
+		}()
+
+		if err != nil {
+			t.Fatalf(`Failed to connect to server %s`, err)
+			return
+		}
+		rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+		rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+		rt += fmt.Sprintf("Connection: close\r\n")
+		rt += fmt.Sprintf("\r\n")
+
+		conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+		_, err = conn.Write([]byte(rt))
+
+		if err != nil {
+			t.Fatalf(`Failed to write first set of data to server %s`, err)
+			return
+		}
+
+		buff := make([]byte, 32768)
+		_, err = conn.Read(buff)
+
+		resString := string(buff[:])
+		if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+			t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_OK)
+		}
+	}
+}

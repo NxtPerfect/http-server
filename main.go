@@ -8,6 +8,19 @@ import (
 	"time"
 )
 
+/*
+  HTTP 1.0 Response
+  HTTP/1.0 200 OK
+  Date: Fri, 08 Aug 2003 08:12:31 GMT
+  Server: Apache/1.3.27 (Unix)
+  MIME-version: 1.0
+  Last-Modified: Fri, 01 Aug 2003 12:45:26 GMT
+  Content-Type: text/html
+  Content-Length: 2345
+  ** a blank line *
+  <HTML> ...
+*/
+
 // Http response header
 type Head struct {
 	ContentType     mediaType
@@ -124,7 +137,7 @@ func (server *Server) handleConnection(conn net.Conn) {
 	fmt.Println("New connection.")
 
 	buff := make([]byte, 32768)
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 	_, err := conn.Read(buff)
 
 	if err != nil {
@@ -136,18 +149,69 @@ func (server *Server) handleConnection(conn net.Conn) {
 		panic("Couldn't read response.")
 	}
 
+	getString := fmt.Sprintf("GET / HTTP/1.")
+	postString := fmt.Sprintf("POST / HTTP/1.")
 	hostString := fmt.Sprintf("Host: %s:%s", server.host, server.port)
-	getString := fmt.Sprintf("GET / HTTP/1.1")
-	postString := fmt.Sprintf("POST / HTTP/1.1")
 	reqString := string(buff[:])
 
-	if (!strings.Contains(reqString, getString) && !strings.Contains(reqString, postString)) ||
-		!strings.Contains(reqString, hostString) {
-		fmt.Println("Bad request!")
-		conn.Write([]byte(fmt.Sprintf("%d", HTTP_BAD_REQUEST)))
-		return
+	fmt.Println("Got request:", reqString)
+
+	responseCode := 0
+	responseString := ""
+
+	if (strings.Contains(reqString, getString) || strings.Contains(reqString, postString)) &&
+		strings.Contains(reqString, hostString) {
+		responseCode = HTTP_OK
+		responseString = "OK"
+	} else {
+		responseCode = HTTP_BAD_REQUEST
+		responseString = "BAD REQUEST"
 	}
-	conn.Write([]byte(fmt.Sprintf("%d", HTTP_OK)))
+	fmt.Println("Bad request!")
+	conn.Write([]byte(fmt.Sprintf("%d %s", responseCode, responseString)))
+	// responseCode = HTTP_BAD_REQUEST
+	// responseString = "BAD REQUEST"
+	// date := time.Now().UTC().Format("02 Jan 2006 15:04:05 MST")
+	//
+	// _, relativeFilePath, found := strings.Cut(reqString, "GET ")
+	// if found == false {
+	// 	fmt.Println("Path not found in get")
+	// 	return
+	// }
+	// filePathRune := []rune(relativeFilePath)
+	// httpIndex := strings.Index(relativeFilePath, " HTTP/")
+	// if httpIndex == -1 {
+	// 	fmt.Println("Bad request")
+	// 	return
+	// }
+	// relativeFilePath = string(filePathRune[:httpIndex])
+	//
+	// fileinfo, err := os.Stat(relativeFilePath)
+	// if err != nil {
+	// 	return
+	// }
+	// mtime := fileinfo.Sys().(*syscall.Stat_t).Mtim
+	//
+	// fmt.Println("Modified time:", mtime)
+	//
+	// // lastModified := time.Format("02 Jan 2006 15:04:05 MST")
+	//
+	// contentLength := fileinfo.Size()
+	// requestFile, err := os.ReadFile(server.templatesPath + relativeFilePath)
+	// if err != nil {
+	// 	fmt.Println("Failed to read file:", err)
+	// 	return
+	// }
+	//
+	// response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", responseCode, responseString)
+	// response += fmt.Sprintf("Date: %s\r\n", date)
+	// response += fmt.Sprintf("Server: Custom/Server\r\n")
+	// // response += fmt.Sprintf("Last-Modified: %s\r\n", lastModified)
+	// response += fmt.Sprintf("Content-Type: text/html\r\n")
+	// response += fmt.Sprintf("Content-Length: %d\r\n\n", contentLength)
+	// response += fmt.Sprintf(string(requestFile))
+	//
+	// conn.Write([]byte(response))
 }
 
 func CreateServer(host string, port string, templatesPath string, paths []Path) (Server, func()) {
