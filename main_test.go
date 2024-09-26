@@ -776,9 +776,7 @@ func TestInvalidPostPostRequests(t *testing.T) {
 	_, err = conn.Read(buff)
 
 	resString := string(buff[:])
-	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
-		t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
-	}
+  isValidServerResponse(t, resString, HTTP_BAD_REQUEST, "BAD REQUEST")
 
 	// Second Request
 
@@ -805,9 +803,7 @@ func TestInvalidPostPostRequests(t *testing.T) {
 	_, err = conn.Read(buff)
 
 	resString = string(buff[:])
-	if !strings.Contains(resString, fmt.Sprint(HTTP_BAD_REQUEST)) {
-		t.Fatalf(`Second request failed with code %s, expected %d`, resString, HTTP_BAD_REQUEST)
-	}
+  isValidServerResponse(t, resString, HTTP_BAD_REQUEST, "BAD REQUEST")
 }
 
 func TestThousandValidRequests(t *testing.T) {
@@ -847,8 +843,117 @@ func TestThousandValidRequests(t *testing.T) {
 		_, err = conn.Read(buff)
 
 		resString := string(buff[:])
-		if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
-			t.Fatalf(`First request failed with code %s, expected %d`, resString, HTTP_OK)
-		}
+    isValidServerResponse(t, resString, HTTP_OK, "OK")
 	}
+}
+
+func TestThousandInvalidRequests(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	for range 1000 {
+		conn, err := net.Dial("tcp", serverAddressAndPort)
+		defer func() {
+			if conn != nil {
+				fmt.Println("Closing down the connection client-side")
+				conn.Close()
+			}
+		}()
+
+		if err != nil {
+			t.Fatalf(`Failed to connect to server %s`, err)
+			return
+		}
+		rt := fmt.Sprintf("GEEET %v HTP/9.0\r\n", "/")
+		rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+		rt += fmt.Sprintf("Connection: close\r\n")
+		rt += fmt.Sprintf("\r\n")
+
+		conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+		_, err = conn.Write([]byte(rt))
+
+		if err != nil {
+			t.Fatalf(`Failed to write first set of data to server %s`, err)
+			return
+		}
+
+		buff := make([]byte, 32768)
+		_, err = conn.Read(buff)
+
+		resString := string(buff[:])
+    isValidServerResponse(t, resString, HTTP_BAD_REQUEST, "BAD REQUEST")
+	}
+}
+
+func TestIfValidResponse(t *testing.T) {
+	cleanup := prepareAndRunDefaultServer(t)
+	defer cleanup()
+
+	serverAddressAndPort := "127.0.0.1:1337"
+
+	conn, err := net.Dial("tcp", serverAddressAndPort)
+	defer func() {
+		if conn != nil {
+			fmt.Println("Closing down the connection client-side")
+			conn.Close()
+		}
+	}()
+
+	if err != nil {
+		t.Fatalf(`Failed to connect to server %s`, err)
+		return
+	}
+	rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+	rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+	rt += fmt.Sprintf("Connection: close\r\n")
+	rt += fmt.Sprintf("\r\n")
+
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	_, err = conn.Write([]byte(rt))
+
+	if err != nil {
+		t.Fatalf(`Failed to write first set of data to server %s`, err)
+		return
+	}
+
+	buff := make([]byte, 32768)
+	_, err = conn.Read(buff)
+
+	resString := string(buff[:])
+  isValidServerResponse(t, resString, HTTP_OK, "OK")
+	if !strings.Contains(resString, fmt.Sprint(HTTP_OK)) {
+		t.Fatalf(`Request failed with code %s, expected %d`, resString, HTTP_OK)
+    println(resString)
+	}
+
+	if !strings.Contains(resString, "<!DOCTYPE html>") {
+		t.Fatalf(`Request didn't return html file`)
+	}
+}
+
+func isValidServerResponse(t *testing.T, response string, expectedCode int, expectedStatus string) {
+  firstResponseLine := fmt.Sprintf("HTTP/1.1 %v %s", expectedCode, expectedStatus)
+  if !strings.Contains(response, firstResponseLine) {
+    t.Fatalf(`Error in first line got: %s expected: %s`, response, firstResponseLine)
+  }
+
+  if expectedCode == HTTP_BAD_REQUEST {
+    return
+  }
+  thirdResponseLine := "Server: Custom/Server"
+  if !strings.Contains(response, thirdResponseLine) {
+    t.Fatalf(`Error in third line got: %s expected: %s`, response, thirdResponseLine)
+  }
+  fifthResponseLine := "Content-Type: text/html"
+  if !strings.Contains(response, fifthResponseLine) {
+    t.Fatalf(`Error in fifth line got: %s expected: %s`, response, fifthResponseLine)
+  }
+  sixthResponseLine := "Content-Length:"
+  if !strings.Contains(response, sixthResponseLine) {
+    t.Fatalf(`Error in sixth line got: %s expected: %s`, response, sixthResponseLine)
+  }
 }

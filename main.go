@@ -8,26 +8,6 @@ import (
 	"time"
 )
 
-/*
-  HTTP 1.0 Response
-  HTTP/1.0 200 OK
-  Date: Fri, 08 Aug 2003 08:12:31 GMT
-  Server: Apache/1.3.27 (Unix)
-  MIME-version: 1.0
-  Last-Modified: Fri, 01 Aug 2003 12:45:26 GMT
-  Content-Type: text/html
-  Content-Length: 2345
-  ** a blank line *
-  <HTML> ...
-*/
-
-// Http response header
-type Head struct {
-	ContentType     mediaType
-	ContentEncoding contentCoding
-	ContentLanguage string
-	ContentLocation string
-}
 
 type mediaType struct {
 	// Case insensitive
@@ -41,14 +21,6 @@ type mediaType struct {
 	    Text/HTML;Charset="utf-8"
 	    text/html; charset="utf-8"
 	*/
-}
-
-type charset struct {
-	token string
-}
-
-type contentCoding struct {
-	token string // "compress" "x-compress" "deflate" "gzip" "x-gzip"
 }
 
 const (
@@ -156,62 +128,59 @@ func (server *Server) handleConnection(conn net.Conn) {
 
 	fmt.Println("Got request:", reqString)
 
-	responseCode := 0
-	responseString := ""
+	responseCode := HTTP_BAD_REQUEST
+	responseString := "BAD REQUEST"
 
 	if (strings.Contains(reqString, getString) || strings.Contains(reqString, postString)) &&
 		strings.Contains(reqString, hostString) {
 		responseCode = HTTP_OK
 		responseString = "OK"
-	} else {
-		responseCode = HTTP_BAD_REQUEST
-		responseString = "BAD REQUEST"
 	}
-	fmt.Println("Bad request!")
-	conn.Write([]byte(fmt.Sprintf("%d %s", responseCode, responseString)))
-	// responseCode = HTTP_BAD_REQUEST
-	// responseString = "BAD REQUEST"
-	// date := time.Now().UTC().Format("02 Jan 2006 15:04:05 MST")
-	//
-	// _, relativeFilePath, found := strings.Cut(reqString, "GET ")
-	// if found == false {
-	// 	fmt.Println("Path not found in get")
-	// 	return
-	// }
-	// filePathRune := []rune(relativeFilePath)
-	// httpIndex := strings.Index(relativeFilePath, " HTTP/")
-	// if httpIndex == -1 {
-	// 	fmt.Println("Bad request")
-	// 	return
-	// }
-	// relativeFilePath = string(filePathRune[:httpIndex])
-	//
-	// fileinfo, err := os.Stat(relativeFilePath)
-	// if err != nil {
-	// 	return
-	// }
-	// mtime := fileinfo.Sys().(*syscall.Stat_t).Mtim
-	//
-	// fmt.Println("Modified time:", mtime)
-	//
-	// // lastModified := time.Format("02 Jan 2006 15:04:05 MST")
-	//
-	// contentLength := fileinfo.Size()
-	// requestFile, err := os.ReadFile(server.templatesPath + relativeFilePath)
-	// if err != nil {
-	// 	fmt.Println("Failed to read file:", err)
-	// 	return
-	// }
-	//
-	// response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", responseCode, responseString)
-	// response += fmt.Sprintf("Date: %s\r\n", date)
-	// response += fmt.Sprintf("Server: Custom/Server\r\n")
-	// // response += fmt.Sprintf("Last-Modified: %s\r\n", lastModified)
-	// response += fmt.Sprintf("Content-Type: text/html\r\n")
-	// response += fmt.Sprintf("Content-Length: %d\r\n\n", contentLength)
-	// response += fmt.Sprintf(string(requestFile))
-	//
-	// conn.Write([]byte(response))
+
+	_, relativeFilePath, found := strings.Cut(reqString, "GET ")
+	if found == false {
+    response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", responseCode, responseString)
+    conn.Write([]byte(response))
+		fmt.Println("Path not found in get")
+		return
+	}
+
+	filePathRune := []rune(relativeFilePath)
+	httpIndex := strings.Index(relativeFilePath, " HTTP/")
+	if httpIndex == -1 {
+    response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", responseCode, responseString)
+    conn.Write([]byte(response))
+		fmt.Println("Bad request")
+		return
+	}
+
+	relativeFilePath = "." + server.templatesPath + string(filePathRune[:httpIndex])
+  
+  // If path is /, return index.html
+  if (strings.HasSuffix(relativeFilePath, "/")) {
+    relativeFilePath += "index.html"
+  }
+
+	fileinfo, err := os.Stat(relativeFilePath)
+	if err != nil {
+    fmt.Println("Couldn't read stats of file", relativeFilePath)
+		return
+	}
+
+	contentLength := fileinfo.Size()
+	requestFile, err := os.ReadFile(relativeFilePath)
+	if err != nil {
+		fmt.Println("Failed to read file:", err)
+		return
+	}
+
+	response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", responseCode, responseString)
+	response += fmt.Sprintf("Server: Custom/Server\r\n")
+	response += fmt.Sprintf("Content-Type: text/html\r\n")
+	response += fmt.Sprintf("Content-Length: %d\r\n\n", contentLength)
+	response += fmt.Sprintf(string(requestFile))
+
+	conn.Write([]byte(response))
 }
 
 func CreateServer(host string, port string, templatesPath string, paths []Path) (Server, func()) {
@@ -263,36 +232,5 @@ func (server *Server) AddPath(url string, method string, returnValue string) err
 	server.paths[url] = append(server.paths[url], Path{url, method, htmlFile})
 	panic("Not implemented yet %s")
 	println(htmlFile)
-	return nil
-}
-
-// Send payload to url
-// returns reponse and error
-func (server *Server) GET(path string) (Payload, error) {
-	// panic("Get request not implemented yet")
-	//
-	// rt := fmt.Sprintf("GET %v HTTP/1.1\r\n", path)
-	// rt += fmt.Sprintf("Host: %v\r\n", server.host)
-	// rt += fmt.Sprintf("Connection: close\r\n")
-	// rt += fmt.Sprintf("\r\n")
-	//
-	// _, err = conn.Write([]byte(rt))
-	// if err != nil {
-	// 	fmt.Print(err)
-	// }
-	return Payload{code: HTTP_OK, content: "No content"}, nil
-}
-
-// Send payload to url
-// returns response and error
-func (server *Server) POST(url string, payload string) (Payload, error) {
-	// panic("Post request not implemented yet")
-	return Payload{code: HTTP_OK, content: "No content"}, nil
-}
-
-// Set permission for path
-// checks if user sends correct header with role
-func (server *Server) ChangePermission(path string, rule string) error {
-	// panic("Changing permissions not implemented yet")
 	return nil
 }
