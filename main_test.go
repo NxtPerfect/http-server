@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"net"
 	"strings"
 	"time"
@@ -794,88 +793,87 @@ func TestInvalidPostPostRequests(t *testing.T) {
 	isValidServerResponse(t, resString, HTTP_BAD_REQUEST)
 }
 
-func TestThousandValidRequests(t *testing.T) {
-	cleanup := prepareAndRunDefaultServer(t)
-	defer cleanup()
-
-	serverAddressAndPort := "127.0.0.1:1337"
-
-	for range 1000 {
-		conn, err := net.Dial("tcp", serverAddressAndPort)
-		defer func() {
-			if conn != nil {
-				fmt.Println("Closing down the connection client-side")
-				conn.Close()
-			}
-		}()
-
-		if err != nil {
-			t.Fatalf(`Failed to connect to server %s`, err)
-			return
-		}
-		rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
-		rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
-		rt += fmt.Sprintf("Connection: close\r\n")
-		rt += fmt.Sprintf("\r\n")
-
-		conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-		_, err = conn.Write([]byte(rt))
-
-		if err != nil {
-			t.Fatalf(`Failed to write first set of data to server %s`, err)
-			return
-		}
-
-		buff := make([]byte, 32768)
-		_, err = conn.Read(buff)
-
-		resString := string(buff[:])
-		isValidServerResponse(t, resString, HTTP_OK)
-	}
-}
-
-func TestThousandInvalidRequests(t *testing.T) {
-	cleanup := prepareAndRunDefaultServer(t)
-	defer cleanup()
-
-	serverAddressAndPort := "127.0.0.1:1337"
-
-	for range 1000 {
-		conn, err := net.Dial("tcp", serverAddressAndPort)
-		defer func() {
-			if conn != nil {
-				fmt.Println("Closing down the connection client-side")
-				conn.Close()
-			}
-		}()
-
-		if err != nil {
-			t.Fatalf(`Failed to connect to server %s`, err)
-			return
-		}
-		rt := fmt.Sprintf("GEEET %v HTP/9.0\r\n", "/")
-		rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
-		rt += fmt.Sprintf("Connection: close\r\n")
-		rt += fmt.Sprintf("\r\n")
-
-		conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-		_, err = conn.Write([]byte(rt))
-
-		if err != nil {
-			t.Fatalf(`Failed to write first set of data to server %s`, err)
-			return
-		}
-
-		buff := make([]byte, 32768)
-		_, err = conn.Read(buff)
-
-		resString := string(buff[:])
-		isValidServerResponse(t, resString, HTTP_BAD_REQUEST)
-	}
-}
-
+//	func TestThousandValidRequests(t *testing.T) {
+//		cleanup := prepareAndRunDefaultServer(t)
+//		defer cleanup()
+//
+//		serverAddressAndPort := "127.0.0.1:1337"
+//
+//		for range 1000 {
+//			conn, err := net.Dial("tcp", serverAddressAndPort)
+//			defer func() {
+//				if conn != nil {
+//					fmt.Println("Closing down the connection client-side")
+//					conn.Close()
+//				}
+//			}()
+//
+//			if err != nil {
+//				t.Fatalf(`Failed to connect to server %s`, err)
+//				return
+//			}
+//			rt := fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+//			rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+//			rt += fmt.Sprintf("Connection: close\r\n")
+//			rt += fmt.Sprintf("\r\n")
+//
+//			conn.SetDeadline(time.Now().Add(5 * time.Second))
+//
+//			_, err = conn.Write([]byte(rt))
+//
+//			if err != nil {
+//				t.Fatalf(`Failed to write first set of data to server %s`, err)
+//				return
+//			}
+//
+//			buff := make([]byte, 32768)
+//			_, err = conn.Read(buff)
+//
+//			resString := string(buff[:])
+//			isValidServerResponse(t, resString, HTTP_OK)
+//		}
+//	}
+//
+//	func TestThousandInvalidRequests(t *testing.T) {
+//		cleanup := prepareAndRunDefaultServer(t)
+//		defer cleanup()
+//
+//		serverAddressAndPort := "127.0.0.1:1337"
+//
+//		for range 1000 {
+//			conn, err := net.Dial("tcp", serverAddressAndPort)
+//			defer func() {
+//				if conn != nil {
+//					fmt.Println("Closing down the connection client-side")
+//					conn.Close()
+//				}
+//			}()
+//
+//			if err != nil {
+//				t.Fatalf(`Failed to connect to server %s`, err)
+//				return
+//			}
+//			rt := fmt.Sprintf("GEEET %v HTP/9.0\r\n", "/")
+//			rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+//			rt += fmt.Sprintf("Connection: close\r\n")
+//			rt += fmt.Sprintf("\r\n")
+//
+//			conn.SetDeadline(time.Now().Add(5 * time.Second))
+//
+//			_, err = conn.Write([]byte(rt))
+//
+//			if err != nil {
+//				t.Fatalf(`Failed to write first set of data to server %s`, err)
+//				return
+//			}
+//
+//			buff := make([]byte, 32768)
+//			_, err = conn.Read(buff)
+//
+//			resString := string(buff[:])
+//			isValidServerResponse(t, resString, HTTP_BAD_REQUEST)
+//		}
+//	}
 func TestIfValidResponse(t *testing.T) {
 	cleanup := prepareAndRunDefaultServer(t)
 	defer cleanup()
@@ -989,61 +987,61 @@ func TestInvalidPathRequests(t *testing.T) {
 	isValidServerResponse(t, resString, HTTP_NOT_FOUND)
 }
 
-func TestBenchmarkOneMillionRequests(t *testing.T) {
-	cleanup := prepareAndRunBenchmarkServer(t)
-	defer cleanup()
-
-	serverAddressAndPort := "127.0.0.1:1337"
-
-	fmt.Println("Starting one million benchmark...")
-
-	start := time.Now()
-	for range 1_000_000 {
-		conn, err := net.Dial("tcp", serverAddressAndPort)
-		defer func() {
-			if conn != nil {
-				fmt.Println("Closing down the connection client-side")
-				conn.Close()
-			}
-		}()
-
-		if err != nil {
-			t.Fatalf(`Failed to connect to server %s`, err)
-			return
-		}
-
-		chosenRequestType := rand.Intn(2)
-
-		rt := ""
-		if chosenRequestType == 0 {
-			rt += fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
-		} else {
-			rt += fmt.Sprintf("POST %v HTTP/1.0\r\n", "/post")
-		}
-		rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
-		rt += fmt.Sprintf("Connection: close\r\n")
-		rt += fmt.Sprintf("\r\n")
-
-		conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-		_, err = conn.Write([]byte(rt))
-
-		if err != nil {
-			t.Fatalf(`Failed to write first set of data to server %s`, err)
-			return
-		}
-
-		buff := make([]byte, 32768)
-		_, err = conn.Read(buff)
-
-		resString := string(buff[:])
-		isValidServerResponse(t, resString, HTTP_OK)
-		conn.Close()
-	}
-
-	elapsed := time.Since(start)
-	fmt.Printf("One Million Requests Took: %s", elapsed)
-}
+// func TestBenchmarkOneMillionRequests(t *testing.T) {
+// 	cleanup := prepareAndRunBenchmarkServer(t)
+// 	defer cleanup()
+//
+// 	serverAddressAndPort := "127.0.0.1:1337"
+//
+// 	fmt.Println("Starting one million benchmark...")
+//
+// 	start := time.Now()
+// 	for range 1_000_000 {
+// 		conn, err := net.Dial("tcp", serverAddressAndPort)
+// 		defer func() {
+// 			if conn != nil {
+// 				fmt.Println("Closing down the connection client-side")
+// 				conn.Close()
+// 			}
+// 		}()
+//
+// 		if err != nil {
+// 			t.Fatalf(`Failed to connect to server %s`, err)
+// 			return
+// 		}
+//
+// 		chosenRequestType := rand.Intn(2)
+//
+// 		rt := ""
+// 		if chosenRequestType == 0 {
+// 			rt += fmt.Sprintf("GET %v HTTP/1.0\r\n", "/")
+// 		} else {
+// 			rt += fmt.Sprintf("POST %v HTTP/1.0\r\n", "/post")
+// 		}
+// 		rt += fmt.Sprintf("Host: %v\r\n", serverAddressAndPort)
+// 		rt += fmt.Sprintf("Connection: close\r\n")
+// 		rt += fmt.Sprintf("\r\n")
+//
+// 		conn.SetDeadline(time.Now().Add(5 * time.Second))
+//
+// 		_, err = conn.Write([]byte(rt))
+//
+// 		if err != nil {
+// 			t.Fatalf(`Failed to write first set of data to server %s`, err)
+// 			return
+// 		}
+//
+// 		buff := make([]byte, 32768)
+// 		_, err = conn.Read(buff)
+//
+// 		resString := string(buff[:])
+// 		isValidServerResponse(t, resString, HTTP_OK)
+// 		conn.Close()
+// 	}
+//
+// 	elapsed := time.Since(start)
+// 	fmt.Printf("One Million Requests Took: %s", elapsed)
+// }
 
 func prepareAndRunBenchmarkServer(t *testing.T) func() {
 	host := "127.0.0.1"

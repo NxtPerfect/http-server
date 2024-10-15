@@ -23,7 +23,6 @@ type Server struct {
 	readyChan     chan struct{}
 	shutdownChan  chan struct{}
 	debug         bool
-	// wg            *sync.WaitGroup
 }
 
 type Path struct {
@@ -32,15 +31,11 @@ type Path struct {
 	value  string
 }
 
-// General HTTP Response type
-// code is HTTP_ code
-// content is the actual http response
-type Payload struct {
-	code    int
-	content string
+type Response struct {
+	code   int
+	string string
 }
 
-// HTTP response codes as int values
 const (
 	HTTP_OK                    = 200
 	HTTP_ACCEPTED              = 202
@@ -105,66 +100,43 @@ func (server *Server) handleConnection(conn net.Conn) {
 	_, err := conn.Read(buff)
 
 	if err != nil {
-		if err.Error() == "EOF" {
-			fmt.Println("Closing connection, got no response to read. Error:", err)
-			return
-		}
+		checkIsEof(err)
 		fmt.Println("Error reading response:", err)
-		panic("Couldn't read response.")
+		return
 	}
 
-	getString := fmt.Sprintf("GET")
-	postString := fmt.Sprintf("POST")
-	httpString := fmt.Sprintf("HTTP/1.")
-	hostString := fmt.Sprintf("Host: %s:%s", server.host, server.port)
+	getString, postString, httpString, hostString := server.getRequestValidationStrings()
 	reqString := string(buff[:])
 
 	if server.debug {
 		fmt.Println("Got request:", reqString)
 	}
 
-	responseCode := HTTP_BAD_REQUEST
-	responseString := "BAD REQUEST"
+	responseCode, responseString := getBadResponseValues()
 
-	if (strings.Contains(reqString, getString) || strings.Contains(reqString, postString)) &&
-		strings.Contains(reqString, hostString) && strings.Contains(reqString, httpString) {
+	if reqStringIsValidGetOrPost(reqString, getString, postString, httpString, hostString) {
 		responseCode = HTTP_OK
 		responseString = "OK"
 	}
 
-	_, relativeFilePath, found := strings.Cut(reqString, "GET ")
-	if found == false {
-		_, relativeFilePath, found = strings.Cut(reqString, "POST ")
-		if found == false {
-			response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", HTTP_BAD_REQUEST, "BAD REQUEST")
-			conn.Write([]byte(response))
-			fmt.Println("Path not found in get")
-			return
-		}
+	relativeFilePath, err := getRelativeFilePathOfRequest(reqString, conn)
+	if err != nil {
+		return
 	}
 
 	filePathRune := []rune(relativeFilePath)
-	httpIndex := strings.Index(relativeFilePath, " HTTP/")
-	if httpIndex == -1 {
-		response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", HTTP_BAD_REQUEST, "BAD REQUEST")
-		conn.Write([]byte(response))
-		fmt.Println("Bad request")
+	httpIndex, err := getIndexOfHttpInRequestOrSendReplyToConnection(relativeFilePath, conn)
+	if err != nil {
 		return
 	}
 
-	if !server.isValidPath(string(filePathRune[:httpIndex])) {
-		responseCode = HTTP_NOT_FOUND
-		responseString = "NOT FOUND"
-		response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", responseCode, responseString)
-		response += fmt.Sprintf("Server: Custom/Server\r\n")
-
-		conn.Write([]byte(response))
-
-		fmt.Printf("Path not in server paths %s.\n", string(filePathRune[:httpIndex]))
+	filePath := string(filePathRune[:httpIndex])
+	if !server.isValidPath(filePath) {
+		writeBadResponseToConnection(filePath, conn)
 		return
 	}
 
-	relativeFilePath = "." + server.templatesPath + "/" + server.getFileFromPath(string(filePathRune[:httpIndex]))
+	relativeFilePath = server.createRelativeFilePath(filePath)
 
 	fileinfo, err := os.Stat(relativeFilePath)
 	if err != nil {
@@ -179,13 +151,83 @@ func (server *Server) handleConnection(conn net.Conn) {
 		return
 	}
 
+	response := Response{code: responseCode, string: responseString}
+	writeGoodResponseToConnection(response, contentLength, requestFile, conn)
+}
+
+func checkIsEof(err error) {
+	if err.Error() == "EOF" {
+		fmt.Println("Closing connection, got no response to read. Error:", err)
+		return
+	}
+}
+
+func (server *Server) getRequestValidationStrings() (string, string, string, string) {
+	getString := fmt.Sprintf("GET")
+	postString := fmt.Sprintf("POST")
+	httpString := fmt.Sprintf("HTTP/1.")
+	hostString := fmt.Sprintf("Host: %s:%s", server.host, server.port)
+	return getString, postString, httpString, hostString
+}
+
+func getBadResponseValues() (int, string) {
+	return HTTP_BAD_REQUEST, "BAD REQUEST"
+}
+
+func reqStringIsValidGetOrPost(reqString string, getString string, postString string, httpString string, hostString string) bool {
+	return (strings.Contains(reqString, getString) || strings.Contains(reqString, postString)) &&
+		strings.Contains(reqString, httpString) && strings.Contains(reqString, hostString)
+}
+
+func getRelativeFilePathOfRequest(reqString string, conn net.Conn) (string, error) {
+	_, relativeFilePath, found := strings.Cut(reqString, "GET ")
+	if found == false {
+		_, relativeFilePath, found = strings.Cut(reqString, "POST ")
+		if found == false {
+			response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", HTTP_BAD_REQUEST, "BAD REQUEST")
+			conn.Write([]byte(response))
+			fmt.Println("Path not found in get")
+			return "", fmt.Errorf("Path not found in get or post. Check if request is valid.")
+		}
+	}
+	return relativeFilePath, nil
+}
+
+func getIndexOfHttpInRequestOrSendReplyToConnection(relativeFilePath string, conn net.Conn) (int, error) {
+	httpIndex := strings.Index(relativeFilePath, " HTTP/")
+	if httpIndex == -1 {
+		response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", HTTP_BAD_REQUEST, "BAD REQUEST")
+		conn.Write([]byte(response))
+		fmt.Println("Bad request")
+		return -1, fmt.Errorf("Request doesn't have HTTP/ string. Check if request is valid.")
+	}
+	return httpIndex, nil
+}
+
+func writeBadResponseToConnection(filePath string, conn net.Conn) {
+	responseCode := HTTP_NOT_FOUND
+	responseString := "NOT FOUND"
 	response := fmt.Sprintf("HTTP/1.1 %v %s\r\n", responseCode, responseString)
 	response += fmt.Sprintf("Server: Custom/Server\r\n")
-	response += fmt.Sprintf("Content-Type: text/html\r\n")
-	response += fmt.Sprintf("Content-Length: %d\r\n\n", contentLength)
-	response += fmt.Sprintf(string(requestFile))
 
 	conn.Write([]byte(response))
+
+	fmt.Printf("Path not in server paths %s.\n", filePath)
+	return
+}
+
+func (server *Server) createRelativeFilePath(filePath string) string {
+	return "." + server.templatesPath + "/" + server.getFileFromPath(filePath)
+}
+
+func writeGoodResponseToConnection(response Response, contentLength int64, requestFile []byte, conn net.Conn) {
+	connResponse := fmt.Sprintf("HTTP/1.1 %v %s\r\n", response.code, response.string)
+	connResponse += fmt.Sprintf("Server: Custom/Server\r\n")
+	connResponse += fmt.Sprintf("Content-Type: text/html\r\n")
+	connResponse += fmt.Sprintf("Content-Length: %d\r\n\n", contentLength)
+	connResponse += fmt.Sprintf(string(requestFile))
+
+	conn.Write([]byte(connResponse))
 }
 
 func (server *Server) isValidPath(path string) bool {
@@ -242,18 +284,4 @@ func CreateDefaultServer() (Server, func()) {
 
 func (server *Server) Shutdown() {
 	close(server.shutdownChan)
-}
-
-func (server *Server) AddPath(url string, method string, returnValue string) error {
-	if strings.HasSuffix(returnValue, ".html") {
-		// TODO: return html
-	}
-	htmlFileContent, err := os.ReadFile(server.templatesPath + "/" + returnValue)
-	if err != nil {
-		panic("File doesn't exist or has incorrect access permissions.")
-	}
-	htmlFile := string(htmlFileContent)
-	server.paths[url] = append(server.paths[url], Path{url, method, htmlFile})
-
-	return nil
 }
